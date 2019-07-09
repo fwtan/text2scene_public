@@ -6,7 +6,18 @@ Fuwen Tan, Song Feng, Vicente Ordonez. CVPR 2019
 In this work, we propose Text2Scene, a model that generates various forms of compositional scene representations from natural language descriptions. Unlike recent works, our method does NOT use Generative Adversarial Networks (GANs). Text2Scene instead learns to sequentially generate objects and their attributes (location, size, appearance, etc) at every time step by attending to different parts of the input text and the current status of the generated scene. We show that under minor modifications, the proposed framework can handle the generation of different forms of scene representations, including cartoon-like scenes, object layouts corresponding to real images, and synthetic images. Our method is not only competitive when compared with state-of-the-art GAN-based methods using automatic metrics and superior based on human judgments but also has the advantage of producing interpretable results.
 
 
-conda install scikit-image opencv seaborn nltk 
+conda install scikit-image opencv seaborn nltk pycairo
+git clone https://github.com/cocodataset/cocoapi.git
+    
+    #To prevent installation error do the following after commiting cocooapi : 
+    #using file explorer  naviagate to cocoapi\PythonAPI\setup.py and change line 14 from:
+    #extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],
+    #to
+    #extra_compile_args={'gcc': ['/Qstd=c99']},
+    #Based on  https://github.com/cocodataset/cocoapi/issues/51
+
+cd cocoapi/PythonAPI
+python setup.py build_ext install
 
 ## Citing
 
