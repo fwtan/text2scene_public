@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-import os, sys, cv2, json
-import math, PIL, cairo
-import copy, random, re
+import os, sys, cv2, json, math, PIL, cairo, copy, random, re
 from copy import deepcopy
 import numpy as np
 import os.path as osp
 from time import time
-from config import get_config
+from composites_config import get_config
 from datetime import datetime
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -170,7 +168,6 @@ class NormalizedTransformationMap(object):
 import string
 punctuation_table = str.maketrans('', '', string.punctuation)
 stop_words = set(stopwords.words('english'))
-# print('stop_words: ', stop_words)
 
 def further_token_process(tokens):
     tokens = [w.translate(punctuation_table) for w in tokens]
@@ -204,8 +201,6 @@ class Vocab(object):
             self.index2word.append(word)
             self.word2count[word] = 1
         self.n_words = 3
-
-        # self.glovec = torchtext.vocab.GloVe(cache='../data/caches')
         self.glovec = torchtext.vocab.GloVe(cache=osp.join(this_dir, '..', 'data', 'caches'))
 
     def get_glovec(self):
@@ -997,45 +992,3 @@ def Monge_Kantorovitch_color_transfer(src_img, dst_img):
     out_img = np.matmul((src_vec - src_mean), T) + dst_mean
     out_img = out_img.reshape(src_img.shape) 
     return out_img
-
-
-###########################################################
-## Not used
-###########################################################
-def crop_image(img, xyxy, pad_value, dilation_ratio=0.0):
-    xywh = xyxy_to_xywh(xyxy.reshape((1,4))).flatten()
-
-    factor = 1.0 + dilation_ratio
-
-    img_width  = img.shape[1]
-    img_height = img.shape[0]
-    out_width  = int(xywh[2] * factor)
-    out_height = int(xywh[3] * factor)
-
-    out_img = np.ones((out_height, out_width, 3), dtype=np.float) * \
-        pad_value.reshape((1,1,3))
-
-    box_cenx = int(xywh[0])
-    box_ceny = int(xywh[1])
-    out_cenx = int(0.5 * out_width)
-    out_ceny = int(0.5 * out_height)
-
-    left_radius   = min(box_cenx,              out_cenx)
-    right_radius  = min(img_width - box_cenx,  out_cenx)
-    top_radius    = min(box_ceny,              out_ceny)
-    bottom_radius = min(img_height - box_ceny, out_ceny)
-
-    out_img[(out_ceny-top_radius):(out_ceny+bottom_radius), \
-            (out_cenx-left_radius):(out_cenx+right_radius),:] \
-            = img[(box_ceny-top_radius):(box_ceny+bottom_radius), \
-                  (box_cenx-left_radius):(box_cenx+right_radius),:]
-
-    return out_img
-
-
-def dilate_mask(mask, radius):
-    inv_mask = 255 - mask
-    dm = cv2.distanceTransform(inv_mask, cv2.cv.CV_DIST_L2, 5)
-    new_mask = mask.copy()
-    new_mask[dm < radius] = 255
-    return new_mask

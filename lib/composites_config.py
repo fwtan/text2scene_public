@@ -23,12 +23,13 @@ parser.add_argument('--input_patch_size',  nargs='+', type=int, default=[64, 64]
 parser.add_argument('--input_vocab_size', type=int, default=8552)
 parser.add_argument('--output_vocab_size', type=int, default=98)
 parser.add_argument('--use_super_category', type=str2bool, default=True)
-parser.add_argument('--grid_size', default=[32, 32], help='location resolution')
-parser.add_argument('--num_scales', type=int, default=17, help='size resolution for COCO')
-parser.add_argument('--num_ratios', type=int, default=17, help='aspect ratio resolution for COCO')
+parser.add_argument('--grid_size', default=[32, 32])
+parser.add_argument('--num_scales', type=int, default=17)
+parser.add_argument('--num_ratios', type=int, default=17)
 parser.add_argument('--pixel_means', nargs='+', type=int, default=[103.53, 116.28, 123.675])
-parser.add_argument('--coco_min_area', type=float, default=0.005, help='should be smaller (e.g. 0.005)')
+parser.add_argument('--coco_min_area', type=float, default=0.005)
 parser.add_argument('--coco_min_ratio', type=float, default=0.5)
+parser.add_argument('--sent_group', type=int, default=-1)
 
 ##################################################################
 # Language vocabulary
@@ -51,7 +52,7 @@ parser.add_argument('--n_patch_features', type=int, default=128)
 parser.add_argument('--n_nntable_trees', type=int, default=20)
 parser.add_argument('--use_patch_background', type=str2bool, default=True)
 parser.add_argument('--use_separable_convolution', type=str2bool, default=False)
-parser.add_argument('--sent_group', type=int, default=-1, help='sentence group index, 5 for COCO, -1 indicates random group')
+
 
 # Text encoder
 parser.add_argument('--n_conv_hidden', type=int, default=512)
