@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
-import os, sys, cv2, json
-import math, PIL, cairo
 import numpy as np
 import pickle, random
 import os.path as osp
 from time import time
-from config import get_config
 from copy import deepcopy
 from glob import glob
-from utils import *
 from annoy import AnnoyIndex
+
+from composites_config import get_config
+from composites_utils import *
 
 
 class PerCategoryTable:
@@ -19,31 +18,13 @@ class PerCategoryTable:
         self.cfg = db.cfg
         self.cache_dir = db.cache_dir
 
-    # def retrieve(self, query_vector, K=1):
-    #     if getattr(self, 'nntable') is None:
-    #         print('The NNTable has not been built, please run build_nntable first.')
-    #         return None
-    #     inds = self.nntable.get_nns_by_vector(query_vector, K, search_k=-1, include_distances=False)
-    #     inds = list(inds)
-    #     if len(inds) > 1:
-    #         patches = []
-    #         for i in range(len(inds)):
-    #             patches.append(self.patchdb[inds[i]])
-    #         return patches
-    #     else:
-    #         return self.patchdb[inds[0]]
-
     def retrieve(self, query_vector, K=1):
-        # if getattr(self, 'nntable') is None:
-        #     print('The NNTable has not been built, please run build_nntable first.')
-        #     return None
-        N = 10
-        inds = self.nntable.get_nns_by_vector(query_vector, N, search_k=-1, include_distances=False)
-        inds = list(inds)
-        tmp = np.random.permutation(range(N))
-        return self.patchdb[inds[tmp[0]]]
+        if getattr(self, 'nntable') is None:
+            print('The NNTable has not been built, please run build_nntable first.')
+            return None
+        inds = list(self.nntable.get_nns_by_vector(query_vector, K, search_k=-1, include_distances=False))
+        return [self.patchdb[x] for x in inds]
             
-
     def build_nntable(self, category_id, patchdb, use_cache=True):
         # keep a reference to the per-category patchdb
         self.patchdb = patchdb

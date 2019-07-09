@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
 import numpy as np
-import cv2, math
-import PIL, cairo
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from utils import *
 from datasets.coco import coco
 from nntable import AllCategoriesTables
+
+from composites_utils import *
 
 
 class simulator(object):
