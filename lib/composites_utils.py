@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import os, sys, cv2, json, math, PIL, cairo, copy, random, re
+import os, sys, cv2, json, math, PIL
+import cairo, copy, random, re, pickle
 from copy import deepcopy
 import numpy as np
 import os.path as osp
@@ -328,8 +329,6 @@ def patch_compose(background_image, xyxy, patch, db):
     factor = np.sqrt(src_area/(dst_area + 1e-10))
     dst_width = int(dst_width * factor+0.5)
     dst_height = int(dst_height * factor+0.5)
-    # print('dst_width', dst_width)
-    # print('dst_height', dst_height)
     dst_img = cv2.resize(dst_img, (dst_width, dst_height))
     dst_msk = cv2.resize(dst_msk, (dst_width, dst_height))
     dst_xyxy = (factor * dst_xyxy+0.5).astype(np.int32)
@@ -408,8 +407,6 @@ def patch_compose_and_erose(bg_image, bg_mask, bg_label, xyxy, patch, db, bg_noi
     factor = np.sqrt(src_area/(dst_area + 1e-10))
     dst_width = int(dst_width * factor+0.5)
     dst_height = int(dst_height * factor+0.5)
-    # print('dst_width', dst_width)
-    # print('dst_height', dst_height)
     dst_img = cv2.resize(dst_img, (dst_width, dst_height), interpolation = cv2.INTER_CUBIC)
     dst_msk = cv2.resize(dst_msk, (dst_width, dst_height), interpolation = cv2.INTER_NEAREST)
     dst_xyxy = (factor * dst_xyxy+0.5).astype(np.int32)
@@ -684,7 +681,7 @@ def xywhs_to_xyxys(boxes, width, height):
     xmax = x + 0.5 * w
     ymin = y - 0.5 * h + 1.0
     ymax = y + 0.5 * h
-    xyxy = np.vstack((xmin, ymin, xmax, ymax)).transpose()
+    xyxy = np.stack((xmin, ymin, xmax, ymax), -1)
 
     return clip_xyxys(xyxy, width, height)
 
@@ -724,11 +721,33 @@ def xyxys_to_xywhs(boxes):
     w = boxes[:, 2] - boxes[:, 0] + 1.0
     h = boxes[:, 3] - boxes[:, 1] + 1.0
 
-    return np.vstack((x, y, w, h)).transpose()
+    return np.stack((x, y, w, h), -1)
 
 ###########################################################
 ## Data
 ###########################################################
+
+def pickle_load(path):
+    with open(path, 'rb') as fid:
+        data_ = pickle.load(fid)
+    return data_
+
+
+def pickle_save(path, data):
+    with open(path, 'wb') as fid:
+        pickle.dump(data, fid, pickle.HIGHEST_PROTOCOL)
+
+
+def json_load(path):
+    with open(path, 'r') as fid:
+        data_ = json.load(fid)
+    return data_
+
+
+def json_save(path, data):
+    with open(path, 'w') as fid:
+        json.dump(data, fid, indent=4, sort_keys=True)
+        
 
 def pad_sequence(inputs, max_length, pad_val, sos_val=None, eos_val=None, eos_msk=None):
     # cut the input sequence off if necessary

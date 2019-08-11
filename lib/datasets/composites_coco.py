@@ -1,31 +1,23 @@
 #!/usr/bin/env python
 
-import os, sys
-import cv2, json
-import math, cairo
+import os, sys, cv2, cairo, random
 import numpy as np
-import pickle, random
 import os.path as osp
 from time import time
 from copy import deepcopy
 from glob import glob
 from collections import OrderedDict
-from scipy import ndimage, misc
 from skimage.transform import resize as array_resize
-
-from config import get_config
-from utils import *
 from nms.cpu_nms import cpu_nms
-
 from nltk.tokenize import word_tokenize
 from pycocotools.coco import COCO
 from pycocotools import mask as COCOmask
+from composites_config import get_config
+from composites_utils import *
 
-import torch, torchtext
 
-
-class coco(object):
-    def __init__(self, config, split, year):
+class composites_coco(object):
+    def __init__(self, config, split, year='2017'):
         self.cfg = config
         self.split = split
         self.year = year
@@ -39,17 +31,19 @@ class coco(object):
         self.color_palette = self.build_color_palette(len(self.classes))
         self.get_coco_split_info()
         self.lang_vocab = self.build_language_vocab()
-        if self.cfg.use_super_category:
-            self.classes = self.super_classes
-            self.category_ind_to_class = self.category_ind_to_super_class
-            self.category_ind_to_class_ind = self.category_ind_to_super_class_ind
-            for x in self.scenedb:
-                x['clses'] = x['super_clses']
+
+        ###########################################################
+        # use super category
+        self.classes = self.super_classes
+        self.category_ind_to_class = self.category_ind_to_super_class
+        self.category_ind_to_class_ind = self.category_ind_to_super_class_ind
+        for x in self.scenedb:
+            x['clses'] = x['super_clses']
+        
         self.cfg.output_vocab_size = len(self.classes)
-        self.cfg.n_conv_hidden = 4*self.cfg.output_vocab_size
+        self.cfg.n_conv_hidden = 4 * self.cfg.output_vocab_size
         self.filter_scenedb()
         self.scenedb = [self.sort_objects(x) for x in self.scenedb]
-        #self.scenedb = [self.sort_objects_like_nms(x) for x in self.scenedb]
         self.patchdb, self.name_to_patch_index = self.scenedb_to_patchdb(self.scenedb)
         indices = range(len(self.classes))
         self.patches_per_class = dict(zip(indices, [[] for i in indices]))
@@ -59,10 +53,9 @@ class coco(object):
             self.patches_per_class[category_id].append(x)
 
     def get_coco_general_info(self):
-        cache_file = osp.join(self.cache_dir, 'coco_general_%s.pkl'%self.year)
+        cache_file = osp.join(self.cache_dir, 'composites_coco_general.pkl')
         if osp.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                dataset_info = pickle.load(fid)
+            dataset_info = pickle_load(cache_file)
             print('dataset_info loaded from {}'.format(cache_file))
 
             self.classes = dataset_info['classes']
@@ -147,19 +140,17 @@ class coco(object):
             dataset_info['class_to_super_class'] = self.class_to_super_class
             dataset_info['class_ind_to_super_class_ind'] = self.class_ind_to_super_class_ind
 
-            with open(cache_file, 'wb') as fid:
-                pickle.dump(dataset_info, fid, pickle.HIGHEST_PROTOCOL)
+            pickle_save(cache_file, dataset_info)
             print('wrote dataset_info to {}'.format(cache_file))
 
-        # temp hack
+        # temp hack for the special tokens
         for i in range(3):
             self.class_ind_to_super_class_ind[i] = i
 
     def get_coco_split_info(self):
-        cache_file = osp.join(self.cache_dir, 'coco_%s_%s.pkl'%(self.split, self.year))
+        cache_file = osp.join(self.cache_dir, 'composites_coco_%s.pkl'%(self.split))
         if osp.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                self.scenedb = pickle.load(fid)
+            self.scenedb = pickle_load(cache_file)
             print('scenedb loaded from {}'.format(cache_file))
         else:
             if getattr(self, 'cocoInstAPI', None) is None:
@@ -170,25 +161,25 @@ class coco(object):
                 self.cocoStuffAPI = COCO(self.get_ann_file('stuff'))
             image_indices = sorted(self.cocoInstAPI.getImgIds())
             scenedb = [self.load_coco_annotation(index) for index in image_indices]
-            if self.split == 'val':
-                with open(cache_file, 'wb') as fid:
-                    pickle.dump(scenedb, fid, pickle.HIGHEST_PROTOCOL)
+            if self.split == 'test':
+                # remember the "test" set we used is the official validation set (2017)
+                pickle_save(cache_file, scenedb)
                 print('wrote valdb to {}'.format(cache_file))
                 self.scenedb = scenedb
             else:
-                # my own train/val split
-                splits = ['train', 'test', 'aux']
+                # my own train/val/aux split
+                # here the 'aux' set contains samples from 'val2014' - 'val2017'
+                splits = ['train', 'val', 'aux']
                 scenedb_dict = {}
                 for x in splits:
                     scenedb_dict[x] = self.load_split(x, scenedb)
-                    cache_file = osp.join(self.cache_dir, 'coco_%s_%s.pkl'%(x, self.year))
-                    with open(cache_file, 'wb') as fid:
-                        pickle.dump(scenedb_dict[x], fid, pickle.HIGHEST_PROTOCOL)
+                    cache_file = osp.join(self.cache_dir, 'composites_coco_%s.pkl'%(x))
+                    pickle_save(cache_file, scenedb_dict[x])
                     print('wrote traindb to {}'.format(cache_file))
                 self.scenedb = scenedb_dict[self.split]
 
     def build_color_palette(self, num_colors):
-        color_palette_path = osp.join(self.cache_dir, 'color_palette.txt')
+        color_palette_path = osp.join(self.cache_dir, 'composites_color_palette.txt')
         if osp.exists(color_palette_path):
             print("Loading color palette.")
             color_palette = np.genfromtxt(color_palette_path, dtype=np.int32)
@@ -201,15 +192,14 @@ class coco(object):
         return color_palette
 
     def build_language_vocab(self):
-        lang_name  = 'coco_lang_vocab_'+self.year
+        lang_name  = 'composites_coco_lang_vocab'
         lang_vocab = Vocab(lang_name)
         lang_vocab_path = osp.join(self.cache_dir, lang_name+'.json')
         if osp.exists(lang_vocab_path):
             lang_vocab.load(lang_vocab_path)
         else:
-            traindb_path = osp.join(self.cache_dir, 'coco_train_%s.pkl'%(self.year))
-            with open(traindb_path, 'rb') as fid:
-                scenedb = pickle.load(fid)
+            traindb_path = osp.join(self.cache_dir, 'composites_coco_train.pkl')
+            scenedb = pickle_load(traindb_path)
             for i in range(len(scenedb)):
                 group_sents = scenedb[i]['captions']
                 for j in range(len(group_sents)):
@@ -340,11 +330,7 @@ class coco(object):
                 bbox = COCOmask.toBbox(deepcopy(component_rle))
                 area = COCOmask.area(deepcopy(component_rle))
                 bbox = np.array(bbox).flatten()
-                # print(bbox, area)
-                # print(stats[j])
-                # print('-----------')
-                # bbox = stats[j][:4]
-                # area = stats[j][-1]
+                
                 x1 = np.max((0, bbox[0]))
                 y1 = np.max((0, bbox[1]))
                 x2 = np.min((width - 1, x1 + np.max((0, bbox[2] - 1))))
@@ -406,7 +392,7 @@ class coco(object):
         return patchdb, name_to_patch_index
 
     def load_split(self, split, scenedb):
-        split_path = osp.join(self.cache_dir, split + '_split.txt')
+        split_path = osp.join(self.cache_dir, 'composites_%s_split.txt'%split)
         split_inds = np.loadtxt(split_path, dtype=np.int32)
         split_inds = sorted(split_inds)
         split_db = [scenedb[i] for i in split_inds]
@@ -440,25 +426,19 @@ class coco(object):
     # Paths
     ####################################################################
     def get_ann_file(self, prefix):
-        # Example annotation path for prefix=captions:
-        #   annotations/captions_train2017.json
-        if (self.split == 'test') or (self.split == 'aux'):
-            # train/test split
+        if (self.split == 'train') or (self.split == 'val') or (self.split == 'aux'):
             split = 'train'
         else:
-            split = self.split
+            split = 'val'
         ann_path = osp.join(self.root_dir, 'annotations', prefix + '_' + split + self.year+'.json')
         assert osp.exists(ann_path), 'Path does not exist: {}'.format(ann_path)
         return ann_path
 
     def color_path_from_index(self, index):
-        # Example image path for index=119993:
-        #   images/train2017/000000119993.jpg
-        if (self.split == 'test') or (self.split == 'aux'):
-            # train/test split
+        if (self.split == 'train') or (self.split == 'val') or (self.split == 'aux'):
             split = 'train'
         else:
-            split = self.split
+            split = 'val'
         if self.year == '2014':
             file_name = ('COCO_'+split+self.year+'_'+str(index).zfill(12) + '.jpg')
         else:
@@ -468,24 +448,21 @@ class coco(object):
         return image_path
 
     def image_path_from_index(self, index, field, ext):
-        # Example semantic path for index=119993:
-        #   field/train2017/000000119993.png
-        if (self.split == 'test') or (self.split == 'aux'):
-            # train/test split
+        if (self.split == 'train') or (self.split == 'val') or (self.split == 'aux'):
+            # train/val split
             split = 'train'
         else:
-            split = self.split
+            split = 'val'
         file_name = (str(index).zfill(12) + '.' + ext)
-        file_path = osp.join(self.root_dir, field, split + self.year, file_name)
+        file_path = osp.join(self.root_dir, field, split, file_name)
         # assert osp.exists(file_path), 'Path does not exist: {}'.format(file_path)
         return file_path
 
     def patch_path_from_indices(self, image_index, instance_index, field, ext, use_background=None):
-        if (self.split == 'test') or (self.split == 'aux'):
-            # train/test split
+        if (self.split == 'train') or (self.split == 'val') or (self.split == 'aux'):
             split = 'train'
         else:
-            split = self.split
+            split = 'val'
         image_index_string = str(image_index).zfill(12)
         instance_index_string = str(instance_index).zfill(12)
         file_name = (image_index_string + '_' + instance_index_string + '.' + ext)
@@ -496,7 +473,7 @@ class coco(object):
                 folder_name = field + '_without_bg'
         else:
             folder_name = field
-        path = osp.join(self.root_dir, folder_name, split + self.year, image_index_string, file_name)
+        path = osp.join(self.root_dir, folder_name, split, image_index_string, file_name)
         # assert osp.exists(path), 'Path does not exist: {}'.format(path)
         return path
 
@@ -577,7 +554,6 @@ class coco(object):
             elif area > 0.02:
                 indices.append(i)
 
-        # indices = np.where(areas > self.cfg.coco_min_area)[0]
         indices = np.array(indices)
         return self.select_objects(scene, indices)
 
@@ -594,7 +570,6 @@ class coco(object):
             ratio = ratios[i]
             if cate < 83 or ratio > self.cfg.coco_min_ratio:
                 indices.append(i)
-        # indices = np.where(areas > self.cfg.coco_min_area)[0]
         indices = np.array(indices)
         return self.select_objects(scene, indices)
 
@@ -611,8 +586,6 @@ class coco(object):
             self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]
             self.scenedb = [self.filter_small_objects(x) for x in self.scenedb]
             self.scenedb = [self.filter_concave_stuffs(x) for x in self.scenedb]
-            # self.scenedb = [entry for entry in self.scenedb if is_valid_2(entry)]
-            # self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]
         elif self.split == 'test':
             self.scenedb = [self.filter_small_objects(x) for x in self.scenedb]
             self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]
@@ -775,12 +748,13 @@ class coco(object):
         color = cv2.imread(color_path, cv2.IMREAD_COLOR)
         mask  = cv2.imread(mask_path,  cv2.IMREAD_GRAYSCALE)
         label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-        if self.cfg.use_super_category:
-            # label = [self.class_ind_to_super_class_ind[x] for x in label.flatten().tolist()]
-            label = map(lambda x: self.class_ind_to_super_class_ind[x], label.flatten().tolist())
-            label = np.array(list(label)).reshape((mask.shape[0], mask.shape[1]))
-        vols  = np.concatenate([label[..., None], mask[..., None], color], -1)
-        return vols
+        # if self.cfg.use_super_category:
+        #     label = map(lambda x: self.class_ind_to_super_class_ind[x], label.flatten().tolist())
+        #     label = np.array(list(label)).reshape((mask.shape[0], mask.shape[1]))
+        # use super category
+        label = map(lambda x: self.class_ind_to_super_class_ind[x], label.flatten().tolist())
+        label = np.array(list(label)).reshape((mask.shape[0], mask.shape[1]))
+        return np.concatenate([label[..., None], mask[..., None], color], -1)
 
     def render_volumes_for_a_scene(self, ref_scene, return_sequence=True, nn_tables=None):
         input_width  = ref_scene['width']
@@ -831,16 +805,12 @@ class coco(object):
                 fg_resnet_path = self.image_path_from_index(image_index, 'image_resnet152', 'pkl')
             else:
                 fg_resnet_path = self.patch_path_from_indices(image_index, fg_instance_ind, 'patch_resnet152', 'pkl', True)
-            
-            with open(fg_resnet_path, 'rb') as fid:
-                fg_resnet_features = pickle.load(fid)
-            fg_resnets.append(fg_resnet_features)
+            fg_resnets.append(pickle_load(fg_resnet_path))
 
             # Negative sample
             pred_feat_path = self.patch_path_from_indices(image_index, fg_instance_ind, 'predicted_feature', 'pkl', None)
             if (nn_tables is not None) and osp.exists(pred_feat_path) and (random.random() < 0.5) and self.cfg.use_hard_mining:
-                with open(pred_feat_path, 'rb') as fid:
-                    query_vector = pickle.load(fid)
+                query_vector = pickle_load(pred_feat_path)
                 n_samples = min(self.cfg.n_nntable_trees, len(self.patches_per_class[cls_idx]))
                 candidate_patches = nn_tables.retrieve(cls_idx, query_vector, n_samples)
                 # print('nn sample', len(candidate_patches))
@@ -864,8 +834,7 @@ class coco(object):
                 neg_resnet_path = self.image_path_from_index(neg_image_index, 'image_resnet152', 'pkl')
             else:
                 neg_resnet_path = self.patch_path_from_indices(neg_image_index, neg_instance_ind, 'patch_resnet152', 'pkl', True)
-            with open(neg_resnet_path, 'rb') as fid:
-                neg_resnet_features = pickle.load(fid)
+            neg_resnet_features = pickle_load(neg_resnet_path)
             neg_resnets.append(neg_resnet_features)
 
         if return_sequence:

@@ -8,7 +8,7 @@ ext_modules = [
     Extension(
         "nms.cpu_nms",
         ["nms/cpu_nms.pyx"],
-        extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],#{'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
+        extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],
         include_dirs = [np.get_include()]
     ),
 ]

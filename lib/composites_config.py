@@ -52,8 +52,6 @@ parser.add_argument('--n_patch_features', type=int, default=128)
 parser.add_argument('--n_nntable_trees', type=int, default=20)
 parser.add_argument('--use_patch_background', type=str2bool, default=True)
 parser.add_argument('--use_separable_convolution', type=str2bool, default=False)
-
-
 # Text encoder
 parser.add_argument('--n_conv_hidden', type=int, default=512)
 parser.add_argument('--n_src_hidden',  type=int, default=256)
@@ -62,24 +60,20 @@ parser.add_argument('--n_shape_hidden', type=int, default=256)
 parser.add_argument('--bidirectional', type=str2bool, default=True)
 parser.add_argument('--n_rnn_layers',  type=int, default=1)
 parser.add_argument('--rnn_cell', type=str, default='GRU')
-parser.add_argument('--n_embed',  type=int, default=300, help='GloVec dimension')
+parser.add_argument('--n_embed',  type=int, default=300)
 parser.add_argument('--emb_dropout_p', type=float, default=0.0)
 parser.add_argument('--rnn_dropout_p', type=float, default=0.0)
-
 # Attention
-parser.add_argument('--attn_type', type=str, default='general', help='attention model to use')
+parser.add_argument('--attn_type', type=str, default='general')
 parser.add_argument('--attn_emb',  type=str2bool, default=True)
-parser.add_argument('--what_attn', type=str2bool, default=True, help='whether to attention for object prediction')
-parser.add_argument('--where_attn', type=int, default=2, help='whether to attention for attribute prediction')
+parser.add_argument('--what_attn', type=str2bool, default=True)
+parser.add_argument('--where_attn', type=int, default=2)
 parser.add_argument('--what_attn_2d', type=str2bool, default=True)
 parser.add_argument('--where_attn_2d', type=str2bool, default=True)
-
 # Decoders
-parser.add_argument('--use_bg_to_pred', type=str2bool, default=False, help='whether to use S_t for object prediction, not helpful')
-parser.add_argument('--use_fg_to_pred', type=int, default=2, help='how to use the o_{t-1}')
-parser.add_argument('--use_bg_to_locate', type=str2bool, default=False, help='whether to use S_t for attribute prediction, not helpful')
-
-
+parser.add_argument('--use_bg_to_pred', type=str2bool, default=False)
+parser.add_argument('--use_fg_to_pred', type=int, default=2)
+parser.add_argument('--use_bg_to_locate', type=str2bool, default=False)
 ##################################################################
 # Training parameters
 ##################################################################
@@ -119,7 +113,7 @@ parser.add_argument('--for_visualization', type=str2bool, default=True)
 ##################################################################
 # Misc
 ##################################################################
-parser.add_argument('--exp_name', type=str, default='txt2image', help='experiment name for logging')
+parser.add_argument('--exp_name', type=str, default='composites', help='experiment name for logging')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--eps',  type=float, default=1e-10, help='epsilon')
 parser.add_argument('--log_dir',  type=str, default=osp.join(this_dir, '..', 'logs'))
