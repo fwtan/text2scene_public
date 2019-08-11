@@ -159,24 +159,14 @@ class composites_coco(object):
                 self.cocoCaptAPI  = COCO(self.get_ann_file('captions'))
             if getattr(self, 'cocoStuffAPI', None) is None:
                 self.cocoStuffAPI = COCO(self.get_ann_file('stuff'))
-            image_indices = sorted(self.cocoInstAPI.getImgIds())
-            scenedb = [self.load_coco_annotation(index) for index in image_indices]
-            if self.split == 'test':
-                # remember the "test" set we used is the official validation set (2017)
-                pickle_save(cache_file, scenedb)
-                print('wrote valdb to {}'.format(cache_file))
-                self.scenedb = scenedb
-            else:
-                # my own train/val/aux split
-                # here the 'aux' set contains samples from 'val2014' - 'val2017'
-                splits = ['train', 'val', 'aux']
-                scenedb_dict = {}
-                for x in splits:
-                    scenedb_dict[x] = self.load_split(x, scenedb)
-                    cache_file = osp.join(self.cache_dir, 'composites_coco_%s.pkl'%(x))
-                    pickle_save(cache_file, scenedb_dict[x])
-                    print('wrote traindb to {}'.format(cache_file))
-                self.scenedb = scenedb_dict[self.split]
+            # image_indices = sorted(self.cocoInstAPI.getImgIds())
+            split_path = osp.join(self.cache_dir, 'composites_%s_split.txt'%self.split)
+            split_inds = np.loadtxt(split_path, dtype=np.int32)
+            split_inds = sorted(split_inds)
+            scenedb = [self.load_coco_annotation(int(index)) for index in split_inds]
+            pickle_save(cache_file, scenedb)
+            print('wrote valdb to {}'.format(cache_file))
+            self.scenedb = scenedb
 
     def build_color_palette(self, num_colors):
         color_palette_path = osp.join(self.cache_dir, 'composites_color_palette.txt')
@@ -210,6 +200,7 @@ class composites_coco(object):
         return lang_vocab
 
     def load_coco_annotation(self, index):
+        # print(index, self.split)
         im_ann = self.cocoInstAPI.loadImgs(index)[0]
         width  = im_ann['width']; height = im_ann['height']
 
@@ -390,13 +381,6 @@ class composites_coco(object):
             name_to_patch_index[x['name']] = i
 
         return patchdb, name_to_patch_index
-
-    def load_split(self, split, scenedb):
-        split_path = osp.join(self.cache_dir, 'composites_%s_split.txt'%split)
-        split_inds = np.loadtxt(split_path, dtype=np.int32)
-        split_inds = sorted(split_inds)
-        split_db = [scenedb[i] for i in split_inds]
-        return split_db
 
     def encode_semantic_map(self, semantic):
         n = len(self.classes)
