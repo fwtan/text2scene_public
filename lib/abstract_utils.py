@@ -18,11 +18,12 @@ import torch, torchtext
 import torch.nn as nn
 
 
-this_dir = osp.dirname(__file__)
-
 ###########################################################
 ## Directory
 ###########################################################
+
+this_dir = osp.dirname(__file__)
+
 
 def maybe_create(dir_path):
     if not osp.exists(dir_path):
