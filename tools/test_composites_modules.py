@@ -7,31 +7,34 @@ import numpy as np
 import pickle, random
 import os.path as osp
 from time import time
-from config import get_config
 from copy import deepcopy
 from glob import glob
 import matplotlib.pyplot as plt
 from nltk.tokenize import word_tokenize
 from collections import OrderedDict
-from utils import *
 
-from datasets.coco import coco
-from datasets.coco_loader import sequence_loader
+
+from composites_utils import *
+from composites_config import get_config
+
+from datasets.composites_coco import composites_coco
+from datasets.composites_loader import sequence_loader
 from modules.attention import Attention
-from modules.encoder import TextEncoder, ImageEncoder
-from modules.encoder import VolumeEncoder, ShapeEncoder
-from modules.encoder import ImageAndLayoutEncoder
+from modules.composites_encoder import TextEncoder, ImageEncoder
+from modules.composites_encoder import VolumeEncoder, ShapeEncoder
+from modules.composites_encoder import ImageAndLayoutEncoder
 
-from modules.conv_rnn import ConvGRU, ConvLSTM
-from modules.decoder import WhatDecoder, WhereDecoder
-from modules.perceptual_loss import VGG19LossNetwork
-from modules.crn_decoder import CRNDecoder
-from modules.image_synthesis_model import ImageSynthesisModel
+# from modules.conv_rnn import ConvGRU, ConvLSTM
+# from modules.decoder import WhatDecoder, WhereDecoder
+# from modules.perceptual_loss import VGG19LossNetwork
+# from modules.crn_decoder import CRNDecoder
+# from modules.image_synthesis_model import ImageSynthesisModel
 from nntable import AllCategoriesTables
 
 import torch, torchtext
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+
 
 
 def test_attention(config):
@@ -46,13 +49,13 @@ def test_attention(config):
 
 
 def test_txt_encoder_coco(config):
-    transformer = image_normalize('background')
-    db = coco(config, 'train', transform=transformer)
-    pca_table = AllCategoriesTables(db)
-    pca_table.run_PCAs_and_build_nntables_in_feature_space()
+    db = composites_coco(config, 'train', '2017')
+    all_tables = AllCategoriesTables(db)
+    all_tables.build_nntables_for_all_categories(True)
+    sequence_db = sequence_loader(db, all_tables)
     net = TextEncoder(db)
 
-    loader = DataLoader(db,
+    loader = DataLoader(sequence_db,
         batch_size=config.batch_size,
         shuffle=False,
         num_workers=config.num_workers)
@@ -105,7 +108,7 @@ def test_img_encoder(config):
 
 
 def test_vol_encoder(config):
-    db = coco(config, 'train', '2017')
+    db = composites_coco(config, 'train', '2017')
 
     all_tables = AllCategoriesTables(db)
     all_tables.build_nntables_for_all_categories(True)
@@ -325,9 +328,9 @@ if __name__ == '__main__':
     # test_attention(config)
     # test_conv_gru(config)
     # test_conv_lstm(config)
-    # test_txt_encoder_coco(config)
+    test_txt_encoder_coco(config)
     # test_img_encoder(config)
-    test_vol_encoder(config)
+    # test_vol_encoder(config)
     # test_shape_encoder(config)
     # test_coco_decoder(config)
     # test_perceptual_loss_network(config)

@@ -95,7 +95,18 @@ class TextEncoder(nn.Module):
 
         return vhs
 
-    def coco_forward(self, input_inds, input_lens):
+    def forward(self, input_inds, input_lens):
+        """
+        Args:
+            - **input_inds**  (bsize, slen)
+            - **input_lens**  (bsize, )
+
+        Returns: dict containing
+            - **output_feats**   (bsize, tlen, hsize)
+            - **output_embed**   (bsize, tlen, esize)
+            - **output_msks**    (bsize, tlen)
+            - **output_hiddens** [list of](num_layers * num_directions, bsize, hsize)
+        """
         out_embeddings = []
         out_rnn_features, out_rnn_masks = [], []
         out_hidden_states, out_cell_states = [], []
@@ -168,23 +179,6 @@ class TextEncoder(nn.Module):
             out['rnn_hiddens'] = out_hidden_states
 
         return out['embeddings'], out['rnn_features'], out['rnn_masks'], out['rnn_hiddens']
-
-    def forward(self, input_inds, input_msks, input_hiddens=None):
-        """
-        Applies a multi-layer RNN to an input sequence.
-
-        Args:
-            - **input_inds**  (bsize, slen)
-            - **input_msks**  (bsize, slen)
-            - **input_hiddens** (num_layers * num_directions, bsize, hsize)
-
-        Returns: dict containing
-            - **output_feats**   (bsize, tlen, hsize)
-            - **output_embed**   (bsize, tlen, esize)
-            - **output_msks**    (bsize, tlen)
-            - **output_hiddens** [list of](num_layers * num_directions, bsize, hsize)
-        """
-        return self.coco_forward(input_inds, input_msks)
 
 
 class BasicBlock(nn.Module):
@@ -271,7 +265,6 @@ class ImageEncoder(nn.Module):
 
         # for param in self.parameters():
         #     param.requires_grad = False
-
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = nn.Sequential(
