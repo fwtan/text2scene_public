@@ -42,7 +42,7 @@ class PerCategoryTable:
             #################################################################
             ## Load the files if possible
             #################################################################
-            self.nntable = AnnoyIndex(self.cfg.n_patch_features)
+            self.nntable = AnnoyIndex(self.cfg.n_patch_features, 'angular')
             self.nntable.load(nntable_file)
         else:
             #################################################################
@@ -51,7 +51,7 @@ class PerCategoryTable:
             category = self.db.classes[category_id]
             print("%s NNTable"%category)
             t0 = time()
-            self.nntable = AnnoyIndex(self.cfg.n_patch_features)
+            self.nntable = AnnoyIndex(self.cfg.n_patch_features, 'angular')
             for i in range(len(patchdb)):
                 x = patchdb[i]
                 image_index = x['image_index']

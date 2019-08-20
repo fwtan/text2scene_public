@@ -2,13 +2,15 @@
 
 import math, cv2
 import numpy as np
-from utils import *
 import torch
 import torch.nn as nn
 from torchvision import models
 import torch.nn.functional as F
 from modules.separable_convolution import same_padding_size
 from modules.separable_convolution import separable_conv2d
+
+
+from composites_utils import *
 
 
 class FeatureExtractor(nn.Module):

@@ -457,8 +457,8 @@ class composites_coco(object):
                 folder_name = field + '_without_bg'
         else:
             folder_name = field
-        path = osp.join(self.root_dir, folder_name, split, image_index_string, file_name)
-        # assert osp.exists(path), 'Path does not exist: {}'.format(path)
+        path = osp.join(self.root_dir, folder_name, split + self.year, image_index_string, file_name)
+        assert osp.exists(path), 'Path does not exist: {}'.format(path)
         return path
 
     ####################################################################
@@ -727,6 +727,7 @@ class composites_coco(object):
 
     def get_volume_from_indices(self, image_index, instance_index):
         label_path = self.patch_path_from_indices(image_index, instance_index, 'patch_label', 'png', None)
+        print(label_path)
         mask_path  = self.patch_path_from_indices(image_index, instance_index, 'patch_mask',  'png', None)
         color_path = self.patch_path_from_indices(image_index, instance_index, 'patch_color', 'jpg', self.cfg.use_patch_background)
         color = cv2.imread(color_path, cv2.IMREAD_COLOR)
