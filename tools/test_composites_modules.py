@@ -23,9 +23,9 @@ from modules.attention import Attention
 from modules.composites_encoder import TextEncoder, ImageEncoder
 from modules.composites_encoder import VolumeEncoder, ShapeEncoder
 from modules.composites_encoder import ImageAndLayoutEncoder
+from modules.composites_decoder import WhatDecoder, WhereDecoder
+from modules.conv_rnn import ConvGRU, ConvLSTM
 
-# from modules.conv_rnn import ConvGRU, ConvLSTM
-# from modules.decoder import WhatDecoder, WhereDecoder
 # from modules.perceptual_loss import VGG19LossNetwork
 # from modules.crn_decoder import CRNDecoder
 # from modules.image_synthesis_model import ImageSynthesisModel
@@ -190,7 +190,7 @@ def test_conv_lstm(config):
 
 
 def test_coco_decoder(config):
-    db = coco(config, 'train', '2017')
+    db = composites_coco(config, 'train', '2017')
     all_tables = AllCategoriesTables(db)
     all_tables.build_nntables_for_all_categories(True)
     sequence_db = sequence_loader(db, all_tables)
@@ -328,11 +328,11 @@ if __name__ == '__main__':
     # test_attention(config)
     # test_conv_gru(config)
     # test_conv_lstm(config)
-    test_txt_encoder_coco(config)
+    # test_txt_encoder_coco(config)
     # test_img_encoder(config)
     # test_vol_encoder(config)
     # test_shape_encoder(config)
-    # test_coco_decoder(config)
+    test_coco_decoder(config)
     # test_perceptual_loss_network(config)
     # test_syn_encoder(config)
     # test_syn_decoder(config)
