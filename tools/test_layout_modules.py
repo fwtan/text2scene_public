@@ -13,7 +13,7 @@ from torchvision import models
 from torch.utils.data import DataLoader
 
 from modules.layout_encoder import TextEncoder, VolumeEncoder
-# from decoder_coco import WhatDecoder, WhereDecoder
+from modules.layout_decoder import WhatDecoder, WhereDecoder
 # from evaluator_coco import evaluator, eval_info, scene_graph
 # from simulator_coco import simulator
 # from model_coco import DrawModel
@@ -80,7 +80,7 @@ def test_vol_encoder(config):
 
 def test_coco_decoder(config):
     transformer = volume_normalize('background')
-    db = coco(config, 'val', transform=transformer)
+    db = layout_coco(config, 'val', transform=transformer)
 
     text_encoder  = TextEncoder(db)
     img_encoder   = VolumeEncoder(config)
@@ -98,11 +98,11 @@ def test_coco_decoder(config):
         num_workers=config.num_workers)
 
     for cnt, batched in enumerate(loader):
-        word_inds = Variable(batched['word_inds'].long())
-        word_lens = Variable(batched['word_lens'].long())
-        bg_imgs   = Variable(batched['background'].float())
+        word_inds = batched['word_inds'].long()
+        word_lens = batched['word_lens'].long()
+        bg_imgs   = batched['background'].float()
 
-        encoder_states = text_encoder(2, word_inds, word_lens)
+        encoder_states = text_encoder(word_inds, word_lens)
         bg_feats = img_encoder(bg_imgs)
         
         prev_bgfs = bg_feats[:,0].unsqueeze(1)
@@ -117,11 +117,10 @@ def test_coco_decoder(config):
         # print('att_wei', att_wei.size())
 
         _, obj_inds = torch.max(obj_logits + 1.0, dim=-1)
-        curr_fgfs = indices2onehots(obj_inds.cpu().data, config.output_cls_size)
+        curr_fgfs = indices2onehots(obj_inds.cpu().data, config.output_cls_size).float()
         # curr_fgfs = curr_fgfs.unsqueeze(1)
         if config.cuda:
             curr_fgfs = curr_fgfs.cuda()
-        curr_fgfs = Variable(curr_fgfs).float()
 
 
         where_outs = where_decoder((rnn_outs, curr_fgfs, prev_bgfs, att_ctx), encoder_states)
@@ -294,16 +293,15 @@ def test_model(config):
 
     net.eval()
     for cnt, batched in enumerate(loader):
-        word_inds = Variable(batched['word_inds'].long())
-        word_lens = Variable(batched['word_lens'].long())
-        bg_images = Variable(batched['background'].float())
+        word_inds = batched['word_inds'].long()
+        word_lens = batched['word_lens'].long()
+        bg_images = batched['background'].float()
 
-        fg_inds = Variable(batched['fg_inds'].long())
-        gt_inds = Variable(batched['out_inds'].long())
-        gt_msks = Variable(batched['out_msks'].float())
+        fg_inds = batched['fg_inds'].long()
+        gt_inds = batched['out_inds'].long()
+        gt_msks = batched['out_msks'].float()
 
         fg_onehots = indices2onehots(fg_inds, config.output_cls_size)
-        fg_onehots = Variable(fg_onehots)
 
 
         # inf_outs, _ = net((word_inds, word_lens, bg_images, fg_onehots))
@@ -403,8 +401,6 @@ def test_topk(config):
         if config.cuda:
             input_inds = input_inds.cuda()
             input_lens = input_lens.cuda()
-        input_inds = Variable(input_inds, requires_grad=False)
-        input_lens = Variable(input_lens, requires_grad=False)
 
         net.eval()
         with torch.no_grad():
@@ -447,8 +443,8 @@ if __name__ == '__main__':
 
 
     # test_txt_encoder_coco(config)
-    test_vol_encoder(config)
-    # test_coco_decoder(config)
+    # test_vol_encoder(config)
+    test_coco_decoder(config)
     # test_evaluator(config)
     # test_simulator(config)
     # test_model(config)
