@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 
 from modules.conv_rnn import ConvGRU, ConvLSTM
 from modules.attention import Attention
-# from decoder import WhatDecoder, WhereDecoder
+from modules.abstract_encoder import TextEncoder, ImageEncoder
+from modules.abstract_decoder import WhatDecoder, WhereDecoder
 # from evaluator import evaluator, eval_info, scene_graph
 # from simulator import simulator
 # from model import DrawModel
@@ -23,7 +24,7 @@ from torch.utils.data import DataLoader
 from datasets.abstract_scene import abstract_scene
 from abstract_utils import *
 from abstract_config import get_config
-from modules.abstract_encoder import TextEncoder, ImageEncoder
+
 
 
 def test_txt_encoder_abstract(config):
@@ -85,7 +86,7 @@ def test_img_encoder(config):
 
 def test_decoder(config):
     transformer = image_normalize('background')
-    db = abstract_scene(config, 'val', transform=transformer)
+    db = abstract_scene(config, 'train', transform=transformer)
     
     text_encoder  = TextEncoder(db)
     img_encoder   = ImageEncoder(config)
@@ -98,12 +99,11 @@ def test_decoder(config):
         shuffle=False, num_workers=config.num_workers)
 
     for cnt, batched in enumerate(loader):
-        word_inds  = Variable(batched['word_inds'].long())
-        word_lens  = Variable(batched['word_lens'].long())
-        # fg_onehots = Variable(batched['cls_inds'].long())
-        bg_imgs    = Variable(batched['background'].float())
+        word_inds = batched['word_inds'].long()
+        word_lens = batched['word_lens'].long()
+        bg_imgs   = batched['background'].float()
         
-        encoder_states = text_encoder(1, word_inds, word_lens)
+        encoder_states = text_encoder(word_inds, word_lens)
         bg_feats = img_encoder(bg_imgs)
         
         prev_bgfs = bg_feats[:,0].unsqueeze(1)
@@ -126,7 +126,7 @@ def test_decoder(config):
         # curr_fgfs = curr_fgfs.unsqueeze(1)
         if config.cuda:
             curr_fgfs = curr_fgfs.cuda()
-        curr_fgfs = Variable(curr_fgfs).float()
+        curr_fgfs = curr_fgfs.float()
         what_outs['fgfs'] = curr_fgfs
 
         where_outs = where_decoder(what_outs, encoder_states)
@@ -304,17 +304,17 @@ def test_model(config):
 
     net.eval()
     for cnt, batched in enumerate(loader):
-        word_inds = Variable(batched['word_inds'].long())
-        word_lens = Variable(batched['word_lens'].long())
-        bg_images = Variable(batched['background'].float())
+        word_inds = batched['word_inds'].long()
+        word_lens = batched['word_lens'].long()
+        bg_images = batched['background'].float()
 
-        fg_inds = Variable(batched['fg_inds'].long())
-        gt_inds = Variable(batched['out_inds'].long())
-        gt_msks = Variable(batched['out_msks'].float())
-        hmaps = Variable(batched['hmaps'].float())
+        fg_inds = batched['fg_inds'].long()
+        gt_inds = batched['out_inds'].long()
+        gt_msks = batched['out_msks'].float()
+        hmaps = batched['hmaps'].float()
 
         fg_onehots = indices2onehots(fg_inds, config.output_cls_size)
-        fg_onehots = Variable(fg_onehots)
+        fg_onehots = fg_onehots
 
 
         inf_outs = net.teacher_forcing(word_inds, word_lens, bg_images, fg_onehots, hmaps)
@@ -378,7 +378,6 @@ def test_topk(config):
     from dataset import imdb
     from utils import image_normalize, maybe_create
     from torch.utils.data import DataLoader
-    from torch.autograd import Variable
     import matplotlib.pyplot as plt
     
     transformer = image_normalize('background')
@@ -410,8 +409,6 @@ def test_topk(config):
         if config.cuda:
             input_inds = input_inds.cuda()
             input_lens = input_lens.cuda()
-        input_inds = Variable(input_inds, requires_grad=False)
-        input_lens = Variable(input_lens, requires_grad=False)
 
         net.eval()
         with torch.no_grad():
@@ -455,8 +452,8 @@ if __name__ == '__main__':
 
     
     # test_txt_encoder_abstract(config)
-    test_img_encoder(config)
-    # test_decoder(config)
+    # test_img_encoder(config)
+    test_decoder(config)
     # test_evaluator(config)
     # test_simulator(config)
     # test_model(config)
