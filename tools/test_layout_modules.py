@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader
 
 from modules.layout_encoder import TextEncoder, VolumeEncoder
 from modules.layout_decoder import WhatDecoder, WhereDecoder
-# from evaluator_coco import evaluator, eval_info, scene_graph
-# from simulator_coco import simulator
-# from model_coco import DrawModel
+from modules.layout_evaluator import evaluator, eval_info, scene_graph
+from modules.layout_simulator import simulator
+from modules.layout_model import DrawModel
 
 from datasets.layout_coco import layout_coco
 from layout_utils import *
@@ -156,7 +156,7 @@ def visualize_bigram(config, img, bigrams, color):
 
 def test_evaluator(config):
     transformer = volume_normalize('background')
-    db = coco(config, 'test', transform=transformer)
+    db = layout_coco(config, 'val', transform=transformer)
     output_dir = osp.join(db.cfg.model_dir, 'test_evaluator_coco')
     maybe_create(output_dir)
 
@@ -214,15 +214,12 @@ def test_evaluator(config):
 
 
 def test_simulator(config):
-    from coco import coco
-    from torch.utils.data import DataLoader
     plt.switch_backend('agg')
-
     output_dir = osp.join(config.model_dir, 'simulator')
     maybe_create(output_dir)
     
     transformer = volume_normalize('background')
-    db = coco(config, 'val', transform=transformer)
+    db = layout_coco(config, 'val', transform=transformer)
 
     loader = DataLoader(db, batch_size=config.batch_size, 
         shuffle=False, num_workers=config.num_workers)
@@ -273,14 +270,14 @@ def test_simulator(config):
 
 def test_model(config):
     transformer = volume_normalize('background')
-    db = coco(config, 'val', transform=transformer)
+    db = layout_coco(config, 'val', transform=transformer)
     net = DrawModel(db)
 
     plt.switch_backend('agg')
     output_dir = osp.join(config.model_dir, 'test_model_coco')
     maybe_create(output_dir)
 
-    pretrained_path = osp.join('data/caches/coco_ckpts/supervised_coco_top1.pkl')
+    pretrained_path = osp.join('../data/caches/layout_ckpts/supervised_coco_top1.pkl')
     assert osp.exists(pretrained_path)
     if config.cuda:
         states = torch.load(pretrained_path) 
@@ -444,8 +441,8 @@ if __name__ == '__main__':
 
     # test_txt_encoder_coco(config)
     # test_vol_encoder(config)
-    test_coco_decoder(config)
+    # test_coco_decoder(config)
     # test_evaluator(config)
     # test_simulator(config)
-    # test_model(config)
+    test_model(config)
 
