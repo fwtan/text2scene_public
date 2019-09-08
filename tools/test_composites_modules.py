@@ -24,6 +24,7 @@ from modules.composites_encoder import TextEncoder, ImageEncoder
 from modules.composites_encoder import VolumeEncoder, ShapeEncoder
 from modules.composites_encoder import ImageAndLayoutEncoder
 from modules.composites_decoder import WhatDecoder, WhereDecoder
+from modules.puzzle_model import PuzzleModel
 from modules.conv_rnn import ConvGRU, ConvLSTM
 
 # from modules.perceptual_loss import VGG19LossNetwork
@@ -316,6 +317,104 @@ def test_syn_model(config):
         print(z.size())
 
 
+def test_puzzle_model(config):
+    output_dir = osp.join(config.model_dir, 'test_puzzle_model')
+    maybe_create(output_dir)
+    plt.switch_backend('agg')
+
+    db = composites_coco(config, 'train', '2017')
+    all_tables = AllCategoriesTables(db)
+    all_tables.build_nntables_for_all_categories(True)
+    sequence_db = sequence_loader(db, all_tables)
+    loader = DataLoader(sequence_db,
+        batch_size=config.batch_size, shuffle=False,
+        num_workers=config.num_workers)
+
+    net = PuzzleModel(db)
+
+    net.eval()
+    for cnt, batched in enumerate(loader):
+        word_inds = batched['word_inds'].long()
+        word_lens = batched['word_lens'].long()
+        bg_images = batched['background'].float()
+        fg_images = batched['foreground'].float()
+        neg_images = batched['negative'].float()
+
+        fg_resnets = batched['foreground_resnets'].float()
+        neg_resnets = batched['negative_resnets'].float()
+
+        fg_inds = batched['fg_inds'].long()
+        gt_inds = batched['out_inds'].long()
+        gt_msks = batched['out_msks'].float()
+
+        fg_onehots = indices2onehots(fg_inds, config.output_vocab_size)
+
+        inf_outs, _, positive_feats, negative_feats = net((word_inds, word_lens, bg_images, fg_onehots, fg_images, neg_images, fg_resnets, neg_resnets))
+        obj_logits, coord_logits, attri_logits, patch_vectors, enc_msks, what_wei, where_wei = inf_outs
+        print('teacher forcing')
+        print('obj_logits ', obj_logits.size())
+        print('coord_logits ', coord_logits.size())
+        print('attri_logits ', attri_logits.size())
+        print('patch_vectors ', patch_vectors.size())
+        print('patch_vectors max:', torch.max(patch_vectors))
+        print('patch_vectors min:', torch.min(patch_vectors))
+        print('patch_vectors norm:', torch.norm(patch_vectors, dim=-2)[0,0,0])
+        print('positive_feats ', positive_feats.size())
+        print('negative_feats ', negative_feats.size())
+        if config.what_attn:
+            print('what_att_logits ', what_wei.size())
+        if config.where_attn > 0:
+            print('where_att_logits ', where_wei.size())
+        print('----------------------')
+
+        _, pred_vecs = net.collect_logits_and_vectors(inf_outs, gt_inds)
+        print('pred_vecs', pred_vecs.size())
+        print('*******************')
+
+        # # inf_outs, env = net.inference(word_inds, word_lens, -1, 0.0, 0, gt_inds, gt_vecs)
+        # inf_outs, env = net.inference(word_inds, word_lens, -1, 2.0, 0, None, None, all_tables)
+        # obj_logits, coord_logits, attri_logits, patch_vectors, enc_msks, what_wei, where_wei = inf_outs
+        # print('scheduled sampling')
+        # print('obj_logits ', obj_logits.size())
+        # print('coord_logits ', coord_logits.size())
+        # print('attri_logits ', attri_logits.size())
+        # print('patch_vectors ', patch_vectors.size())
+        # if config.what_attn:
+        #     print('what_att_logits ', what_wei.size())
+        # if config.where_attn > 0:
+        #     print('where_att_logits ', where_wei.size())
+        # print('----------------------')
+        
+        
+        # sequences = env.batch_redraw(True)
+        # for i in range(len(sequences)):
+        #     sequence = sequences[i]
+        #     image_idx = batched['image_index'][i]
+        #     name = '%03d_'%i + str(image_idx).zfill(12)
+        #     out_path = osp.join(output_dir, name+'.png')
+        #     color = cv2.imread(batched['color_path'][i], cv2.IMREAD_COLOR)
+        #     color, _, _ = create_squared_image(color)
+        
+        #     fig = plt.figure(figsize=(32, 16))
+        #     plt.suptitle(batched['sentence'][i], fontsize=30)
+        
+        #     for j in range(min(len(sequence), 14)):
+        #         plt.subplot(3, 5, j+1)
+        #         partially_completed_img = clamp_array(sequence[j][:,:,-3:], 0, 255).astype(np.uint8)
+        #         partially_completed_img = partially_completed_img[:,:,::-1]
+        #         plt.imshow(partially_completed_img)
+        #         plt.axis('off')
+        
+        #     plt.subplot(3, 5, 15)
+        #     plt.imshow(color[:,:,::-1])
+        #     plt.axis('off')
+        
+        #     fig.savefig(out_path, bbox_inches='tight')
+        #     plt.close(fig)
+
+        break
+
+
 if __name__ == '__main__':
     config, unparsed = get_config()
     np.random.seed(config.seed)
@@ -332,7 +431,8 @@ if __name__ == '__main__':
     # test_img_encoder(config)
     # test_vol_encoder(config)
     # test_shape_encoder(config)
-    test_coco_decoder(config)
+    # test_coco_decoder(config)
+    test_puzzle_model(config)
     # test_perceptual_loss_network(config)
     # test_syn_encoder(config)
     # test_syn_decoder(config)

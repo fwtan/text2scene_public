@@ -3,7 +3,6 @@
 import numpy as np
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from datasets.coco import coco
 from nntable import AllCategoriesTables
 
 from composites_utils import *
