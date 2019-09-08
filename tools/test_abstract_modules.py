@@ -11,9 +11,9 @@ from modules.conv_rnn import ConvGRU, ConvLSTM
 from modules.attention import Attention
 from modules.abstract_encoder import TextEncoder, ImageEncoder
 from modules.abstract_decoder import WhatDecoder, WhereDecoder
-# from evaluator import evaluator, eval_info, scene_graph
-# from simulator import simulator
-# from model import DrawModel
+from modules.abstract_evaluator import evaluator, eval_info, scene_graph
+from modules.abstract_simulator import simulator
+from modules.abstract_model import DrawModel
 
 import torch
 import torch.nn as nn
@@ -164,7 +164,7 @@ def visualize_bigram(config, img, bigrams, color):
 
 def test_evaluator(config):
     transformer = image_normalize('background')
-    db = abstract_scene(config, 'test', transform=transformer)
+    db = abstract_scene(config, 'train', transform=transformer)
     output_dir = osp.join(db.cfg.model_dir, 'test_evaluator')
     maybe_create(output_dir)
 
@@ -291,7 +291,7 @@ def test_model(config):
     output_dir = osp.join(config.model_dir, 'test_model')
     maybe_create(output_dir)
 
-    pretrained_path = osp.join('data/caches/abstract_ckpts/supervised_abstract_top1.pkl')
+    pretrained_path = osp.join('../data/caches/abstract_ckpts/supervised_abstract_top1.pkl')
     assert osp.exists(pretrained_path)
     if config.cuda:
         states = torch.load(pretrained_path) 
@@ -453,7 +453,7 @@ if __name__ == '__main__':
     
     # test_txt_encoder_abstract(config)
     # test_img_encoder(config)
-    test_decoder(config)
+    # test_decoder(config)
     # test_evaluator(config)
     # test_simulator(config)
-    # test_model(config)
+    test_model(config)
