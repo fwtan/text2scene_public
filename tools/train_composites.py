@@ -7,13 +7,14 @@ import numpy as np
 import pickle, random
 import os.path as osp
 from time import time
-from config import get_config
 from copy import deepcopy
 from glob import glob
 import matplotlib.pyplot as plt
-from utils import *
 
-from datasets.coco import coco
+from composites_utils import *
+from composites_config import get_config
+from datasets.composites_coco import composites_coco
+
 from modules.puzzle_model import PuzzleModel
 from modules.puzzle_trainer import PuzzleTrainer
 # from nntable import AllCategoriesTables
@@ -24,12 +25,11 @@ from torch.utils.data import DataLoader
 
 
 def train_puzzle_model(config):
-    traindb = coco(config, 'train', '2017')
-    valdb   = coco(config, 'val',   '2017')
-    testdb  = coco(config, 'test',  '2017')
+    traindb = composites_coco(config, 'train', '2017')
+    valdb   = composites_coco(config, 'val',   '2017')
+    testdb  = composites_coco(config, 'test',  '2017')
     trainer = PuzzleTrainer(traindb)
-    # we use the official validation set as test set
-    trainer.train(traindb, testdb, valdb)
+    trainer.train(traindb, valdb, testdb)
 
 
 def overfit_puzzle_model(config):
