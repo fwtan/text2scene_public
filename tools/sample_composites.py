@@ -7,13 +7,14 @@ import numpy as np
 import pickle, random
 import os.path as osp
 from time import time
-from config import get_config
 from copy import deepcopy
 from glob import glob
 import matplotlib.pyplot as plt
-from utils import *
 
-from datasets.coco import coco
+from composites_utils import *
+from composites_config import get_config
+from datasets.composites_coco import composites_coco
+
 from modules.puzzle_model import PuzzleModel
 from modules.puzzle_trainer import PuzzleTrainer
 # from nntable import AllCategoriesTables
@@ -26,8 +27,8 @@ from nntable import AllCategoriesTables
 
 
 def puzzle_model_inference_preparation(config):
-    traindb = coco(config, 'train', '2017')
-    testdb = coco(config, 'test', '2017')
+    traindb = composites_coco(config, 'train', '2017')
+    testdb = composites_coco(config, 'test', '2017')
     trainer = PuzzleTrainer(traindb)
     t0 = time()
     trainer.dump_shape_vectors(traindb)
@@ -41,9 +42,9 @@ def puzzle_model_inference_preparation(config):
 
 
 def puzzle_model_inference(config):
-    traindb = coco(config, 'train', '2017')
-    valdb = coco(config, 'val', '2017')
-    auxdb = coco(config, 'aux', '2017')
+    traindb = composites_coco(config, 'train', '2017')
+    valdb = composites_coco(config, 'val', '2017')
+    auxdb = composites_coco(config, 'aux', '2017')
     trainer = PuzzleTrainer(traindb)
     t0 = time()
     all_tables = AllCategoriesTables(traindb)
@@ -51,11 +52,11 @@ def puzzle_model_inference(config):
     print("NN completes (time %.2fs)" % (time() - t0))
     t0 = time()
     if config.for_visualization:
-        trainer.sample_for_vis(0, valdb, len(valdb.scenedb), nn_table=all_tables)
+        trainer.sample_for_vis(0, testdb, len(valdb.scenedb), nn_table=all_tables)
         trainer.sample_for_vis(0, auxdb, len(auxdb.scenedb), nn_table=all_tables)
     else:
-        trainer.sample_for_eval(valdb, nn_table=all_tables)
-        # trainer.sample_for_eval(auxdb, nn_table=all_tables)
+        trainer.sample_for_eval(testdb, nn_table=all_tables)
+        trainer.sample_for_eval(auxdb, nn_table=all_tables)
     print("Sampling completes (time %.2fs)" % (time() - t0))
     
     
