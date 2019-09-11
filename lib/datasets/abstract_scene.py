@@ -684,58 +684,25 @@ class abstract_scene(Dataset):
 
         return scene
 
-    # def draw_baseline(self, group_id):
-    #     prefix  = 'TuplesText%d'%group_id + '_test'
-    #     in_dir  = osp.join(self.cache_dir, prefix, 'jsons')
-    #     img_dir = osp.join(self.cache_dir, prefix, 'images')
-    #     txt_dir = osp.join(self.cache_dir, prefix, 'texts')
-    #     maybe_create(img_dir)
-    #     maybe_create(txt_dir)
-
-    #     for i in range(len(self.scenedb)):
-    #         gt_scene = self.scenedb[i]
-    #         scene_idx = int(gt_scene['scene_idx'])
-    #         sents = gt_scene['scene_sentences'][group_id-1]
-    #         name = osp.splitext(osp.basename(gt_scene['image_path']))[0]
-    #         txt_path = osp.join(txt_dir, name+'_%09d_'%scene_idx+'.json')
-    #         with open(txt_path, 'w') as fp:
-    #             json.dump(sents, fp, indent=4, sort_keys=True)
-
-    #         json_path = osp.join(in_dir, '%d.json'%scene_idx)
-    #         if not osp.exists(json_path):
-    #             continue
-    #         baseline_scene = self.json_to_scene(json_path)
-    #         baseline_img = self.render_scene_as_output(baseline_scene)
-    #         img_path = osp.join(img_dir, name+'_%09d_'%scene_idx+'.png')
-    #         cv2.imwrite(img_path, baseline_img)
-    #         print(i)
-    #         # if i > 5:
-    #         #     break
-
-    # def evaluate_baseline(self, group_id):
-    #     prefix = 'TuplesText%d'%group_id + '_test'
-    #     in_dir = osp.join(self.cache_dir, prefix, 'jsons')
-
-    #     infos = []
-    #     ev = evaluator(self)
-    #     for i in range(len(self.scenedb)):
-    #         gt_scene = self.scenedb[i]
-    #         scene_idx = int(gt_scene['scene_idx'])
-    #         json_path = osp.join(in_dir, '%d.json'%scene_idx)
-    #         if not osp.exists(json_path):
-    #             continue
-    #         baseline_scene = self.json_to_scene(json_path)
-
-    #         gt_graph = scene_graph(self, gt_scene, None, False)
-    #         baseline_graph = scene_graph(self, baseline_scene, None, False)
-
-    #         score = ev.evaluate_graph(baseline_graph, gt_graph)
-    #         infos.append(score)
-
-    #         print(i)
-    #         # if i > 5:
-    #         #     break
-        
-    #     infos = np.stack(infos, 0)
-    #     return infos
+    ########################################################################
+    ## Demo
+    ########################################################################
+    def encode_sentences(self, sentences):
+        word_inds, word_lens = [], []
+        for k in range(len(sentences)):
+            s = sentences[k]
+            cur_tokens = [w for w in word_tokenize(s.lower())]
+            cur_tokens = further_token_process(cur_tokens)
+            cur_inds   = [self.lang_vocab.word2index[w] for w in cur_tokens]
+            mask_value = 0.0
+            if k == len(sentences) - 1:
+                mask_value = 1.0
+            cur_inds, cur_mask = self.pad_sequence(
+                cur_inds, self.cfg.max_input_length, self.cfg.PAD_idx, None, self.cfg.EOS_idx, mask_value)
+            cur_len = np.sum(cur_mask)
+            word_inds.append(cur_inds)
+            word_lens.append(cur_len)
+        word_inds = np.stack(word_inds, 0).astype(np.int32)
+        word_lens = np.stack(word_lens, 0).astype(np.int32)
+        return word_inds, word_lens
 
