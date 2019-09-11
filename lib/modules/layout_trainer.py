@@ -671,6 +671,64 @@ class SupervisedTrainer(object):
         info_path = osp.join(out_dir, 'eval_info_top1.json')
         log_coco_scores(infos, info_path)
 
+    def sample_demo(self, input_sentences):
+        output_dir = osp.join(self.cfg.model_dir, 'layout_samples')
+        maybe_create(output_dir)
+        num_sents = len(input_sentences)
+        ##############################################################
+        # Main loop
+        ##############################################################
+        plt.switch_backend('agg')
+        if self.cfg.cuda and self.cfg.parallel:
+            net = self.net.module
+        else:
+            net = self.net
+        for i in range(num_sents):
+            sentence = input_sentences[i]
+            ##############################################################
+            # Inputs
+            ##############################################################
+            word_inds, word_lens = self.db.encode_sentence(sentence)
+            input_inds_np = np.array(word_inds)
+            input_lens_np = np.array(word_lens)
+            input_inds = torch.from_numpy(input_inds_np).long().unsqueeze(0)
+            input_lens = torch.from_numpy(input_lens_np).long().unsqueeze(0)
+            if self.cfg.cuda:
+                input_inds = input_inds.cuda()
+                input_lens = input_lens.cuda()
+            ##############################################################
+            # Inference
+            ##############################################################
+            self.net.eval()
+            with torch.no_grad():
+                inf_outs, env = net.inference(input_inds, input_lens, -1, 2.0, 0, None)
+            frames = env.batch_redraw(return_sequence=True)[0]
+            # _, _, _, _, what_wei, where_wei = inf_outs
+            # if self.cfg.what_attn:
+            #     what_attn_words = self.decode_attention(
+            #         input_inds_np, input_lens_np, what_wei.squeeze(0))
+            # if self.cfg.where_attn > 0:
+            #     where_attn_words = self.decode_attention(
+            #         input_inds_np, input_lens_np, where_wei.squeeze(0))
+            ##############################################################
+            # Draw
+            ##############################################################
+            fig = plt.figure(figsize=(60, 40))
+            plt.suptitle(sentence, fontsize=40)
+            for j in range(frames.shape[0]):
+                # subtitle = ''
+                # if self.cfg.what_attn:
+                #     subtitle = subtitle + ' '.join(what_attn_words[j])
+                # if self.cfg.where_attn > 0:
+                #     subtitle = subtitle + '\n' + ' '.join(where_attn_words[j])
+                plt.subplot(4, 3, j+1)
+                # plt.title(subtitle, fontsize=30)
+                plt.imshow(frames[j, :, :, ::-1])
+                plt.axis('off')
+            out_path = osp.join(output_dir, '%09d.png'%i)
+            fig.savefig(out_path, bbox_inches='tight')
+            plt.close(fig)
+
     def decode_attention(self, word_inds, word_lens, att_logits):
         _, att_inds  = torch.topk(att_logits, 3, -1)
         att_inds  = att_inds.cpu().data.numpy()

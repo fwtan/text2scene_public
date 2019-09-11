@@ -669,3 +669,14 @@ class layout_coco(Dataset):
         else:
             return imgs[-1]
 
+    ########################################################################
+    ## For demo
+    ########################################################################
+    def encode_sentence(self, sentence):
+        tokens = [w for w in word_tokenize(sentence.lower())]
+        tokens = further_token_process(tokens)
+        word_inds = [self.lang_vocab.word_to_index(w) for w in tokens]
+        word_inds = [wi for wi in word_inds if wi > self.cfg.EOS_idx] 
+        word_inds, word_msks = self.pad_sequence(word_inds, 
+            self.cfg.max_input_length, self.cfg.PAD_idx, None, self.cfg.EOS_idx, 1.0)
+        return word_inds.astype(np.int32), np.sum(word_msks).astype(np.int32)

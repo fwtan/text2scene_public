@@ -660,7 +660,7 @@ class SupervisedTrainer(object):
         # Main loop
         ##############################################################
         num_sents = len(input_sentences)
-
+        plt.switch_backend('agg')
         for i in range(num_sents):
             sentences = input_sentences[i]
             ##############################################################
