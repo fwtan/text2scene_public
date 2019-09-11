@@ -452,6 +452,68 @@ class PuzzleTrainer(object):
 
         return attn_words
 
+    def sample_demo(self, input_sentences, nn_table):
+        output_dir = osp.join(self.cfg.model_dir, 'composites_samples')
+        maybe_create(output_dir)
+        plt.switch_backend('agg')
+        if self.cfg.cuda and self.cfg.parallel:
+            net = self.net.module
+        else:
+            net = self.net
+        num_sents = len(input_sentences)
+        for i in range(num_sents):
+            sentence = input_sentences[i]
+            ##############################################################
+            # Inputs
+            ##############################################################
+            word_inds, word_lens = self.db.encode_sentence(sentence)
+            input_inds_np = np.array(word_inds)
+            input_lens_np = np.array(word_lens)
+            input_inds = torch.from_numpy(input_inds_np).long().unsqueeze(0)
+            input_lens = torch.from_numpy(input_lens_np).long().unsqueeze(0)
+            if self.cfg.cuda:
+                input_inds = input_inds.cuda()
+                input_lens = input_lens.cuda()
+            ##############################################################
+            # Inference
+            ##############################################################
+            self.net.eval()
+            with torch.no_grad():
+                inf_outs, env = net.inference(input_inds, input_lens, -1, 1.0, 0, None, None, nn_table)
+            frames, _, _, _, _ = env.batch_redraw(return_sequence=True)
+            frames = frames[0]
+            # _, _, _, _, _, what_wei, where_wei = inf_outs
+            # if self.cfg.what_attn:
+            #     what_attn_words = self.decode_attention(
+            #         input_inds_np, input_lens_np, what_wei.squeeze(0))
+            # if self.cfg.where_attn > 0:
+            #     where_attn_words = self.decode_attention(
+            #         input_inds_np, input_lens_np, where_wei.squeeze(0))
+
+            ##############################################################
+            # Draw
+            ##############################################################
+            fig = plt.figure(figsize=(32, 32))
+            plt.suptitle(sentence, fontsize=40)
+            for j in range(len(frames)):
+                # subtitle = ''
+                # if self.cfg.what_attn:
+                #     subtitle = subtitle + ' '.join(what_attn_words[j])
+                # if self.cfg.where_attn > 0:
+                #     subtitle = subtitle + '\n' + ' '.join(where_attn_words[j])
+                plt.subplot(4, 4, j+1)
+                # plt.title(subtitle, fontsize=30)
+                if self.cfg.use_color_volume:
+                    vis_img, _ = heuristic_collage(frames[j], 83)
+                else:
+                    vis_img = frames[j][:,:,-3:]
+                vis_img = clamp_array(vis_img[ :, :, ::-1], 0, 255).astype(np.uint8)
+                plt.imshow(vis_img)
+                plt.axis('off')
+            out_path = osp.join(output_dir, '%09d.png'%i)
+            fig.savefig(out_path, bbox_inches='tight')
+            plt.close(fig)
+        
     def sample_for_vis(self, epoch, test_db, N, random_or_not=False, nn_table=None):
         ##############################################################
         # Output prefix

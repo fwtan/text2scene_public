@@ -151,20 +151,17 @@ class simulator(object):
         xywh = self.db.index2box(input_inds[1:])
         xywh = xywh * np.array([w, h, w, h])
         xyxy = xywh_to_xyxy(xywh, w, h)
-        patch = self.nn_table.retrieve(cls_ind, input_vec)
+        patch = self.nn_table.retrieve(cls_ind, input_vec)[0]
+        # print(patch)
         # print(patch['name'])
 
         # update the frame
         if self.cfg.use_color_volume:
             input_frame[:,:,3*cls_ind:3*(cls_ind+1)], input_mask, _, input_label, _ = \
-                patch_compose_and_erose(
-                    input_frame[:,:,3*cls_ind:3*(cls_ind+1)], 
-                    input_mask, input_label, xyxy, patch, self.db)
+                patch_compose_and_erose(input_frame[:,:,3*cls_ind:3*(cls_ind+1)], input_mask, input_label, xyxy, patch, self.db)
         else:
             input_frame[:,:,-3:], input_mask, _, input_label, _ = \
-                patch_compose_and_erose(
-                    input_frame[:,:,-3:], 
-                    input_mask, input_label, xyxy, patch, self.db)
+                patch_compose_and_erose(input_frame[:,:,-3:], input_mask, input_label, xyxy, patch, self.db)
             input_frame[:,:,-4] = np.maximum(255*input_mask, input_frame[:,:,-4])
             input_frame[:,:,cls_ind] = np.maximum(255*input_mask, input_frame[:,:,cls_ind])
         return input_frame, input_mask, input_label, patch

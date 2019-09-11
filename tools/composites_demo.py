@@ -17,7 +17,6 @@ from datasets.composites_coco import composites_coco
 
 from modules.puzzle_model import PuzzleModel
 from modules.puzzle_trainer import PuzzleTrainer
-# from nntable import AllCategoriesTables
 
 import torch, torchtext
 from torch.utils.data import Dataset
@@ -58,6 +57,19 @@ def puzzle_model_inference(config):
         trainer.sample_for_eval(testdb, nn_table=all_tables)
         trainer.sample_for_eval(auxdb, nn_table=all_tables)
     print("Sampling completes (time %.2fs)" % (time() - t0))
+
+
+def composites_demo(config):
+    traindb = composites_coco(config, 'train', '2017')
+    trainer = PuzzleTrainer(traindb)
+    t0 = time()
+    all_tables = AllCategoriesTables(traindb)
+    all_tables.build_nntables_for_all_categories(True)
+    print("NN completes (time %.2fs)" % (time() - t0))
+    t0 = time()
+    input_sentences = json_load('examples/composites_samples.json')
+    trainer.sample_demo(input_sentences, all_tables)   
+    print("Sampling completes (time %.2fs)" % (time() - t0))
     
     
 if __name__ == '__main__':
@@ -70,5 +82,6 @@ if __name__ == '__main__':
         torch.cuda.manual_seed_all(config.seed)
     prepare_directories(config)
 
-    puzzle_model_inference_preparation(config)
+    # puzzle_model_inference_preparation(config)
     # puzzle_model_inference(config)
+    composites_demo(config)
