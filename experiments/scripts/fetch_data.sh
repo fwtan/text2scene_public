@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ABSTRACT=https://vision.ece.vt.edu/clipart/dataset/AbstractScenes_v1.1.zip
-COCO_TRAIN=http://images.cocodataset.org/zips/val2017.zip
+COCO_TRAIN=http://images.cocodataset.org/zips/train2017.zip
 COCO_VAL=http://images.cocodataset.org/zips/val2017.zip
 COCO_ANNOTATION_17=http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 COCO_ANNOTATION_14=http://images.cocodataset.org/annotations/annotations_trainval2014.zip
