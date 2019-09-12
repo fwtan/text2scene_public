@@ -42,10 +42,15 @@ def puzzle_model_inference_preparation(config):
 
 def puzzle_model_inference(config):
     traindb = composites_coco(config, 'train', '2017')
-    valdb = composites_coco(config, 'val', '2017')
+    valdb = composites_coco(config, 'test', '2017')
     auxdb = composites_coco(config, 'aux', '2017')
     trainer = PuzzleTrainer(traindb)
     t0 = time()
+
+    patch_dir_name = 'patch_feature_'+'with_bg' if config.use_patch_background else 'without_bg'
+    if not osp.exists(osp.join(traindb.root_dir, patch_dir_name)):
+        trainer.dump_shape_vectors(traindb)
+
     all_tables = AllCategoriesTables(traindb)
     all_tables.build_nntables_for_all_categories(True)
     print("NN completes (time %.2fs)" % (time() - t0))
@@ -63,6 +68,11 @@ def composites_demo(config):
     traindb = composites_coco(config, 'train', '2017')
     trainer = PuzzleTrainer(traindb)
     t0 = time()
+
+    patch_dir_name = 'patch_feature_'+'with_bg' if config.use_patch_background else 'without_bg'
+    if not osp.exists(osp.join(traindb.root_dir, patch_dir_name)):
+        trainer.dump_shape_vectors(traindb)
+
     all_tables = AllCategoriesTables(traindb)
     all_tables.build_nntables_for_all_categories(True)
     print("NN completes (time %.2fs)" % (time() - t0))
@@ -82,6 +92,6 @@ if __name__ == '__main__':
         torch.cuda.manual_seed_all(config.seed)
     prepare_directories(config)
 
-    puzzle_model_inference_preparation(config)
+    # puzzle_model_inference_preparation(config)
     # puzzle_model_inference(config)
     composites_demo(config)
