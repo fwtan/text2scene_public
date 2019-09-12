@@ -61,9 +61,9 @@ Note that the demos will be run in CPU by default. To use GPU, simply add the `-
 ## Training
 You can run the following scripts to train the models:
 ```Shell
-./experiment/scripts/train_abstract.sh # Train the abstract scene model
-./experiment/scripts/train_layout.sh # Train the coco layout model
-./experiment/scripts/train_composites.sh # Train the composite image model
+./experiment/scripts/train_abstract.sh 		# Train the abstract scene model
+./experiment/scripts/train_layout.sh 		# Train the coco layout model
+./experiment/scripts/train_composites.sh 	# Train the composite image model
 ```
 The composite image model will be trained using multiple GPUs by default. To use a single GPU, please remove the `--parallel` flag and modify the batch size using the `--batch_size` flag accordingly.
 
@@ -80,8 +80,7 @@ If you find our paper/code useful, please consider citing:
 	    title = {Text2Scene: Generating Compositional Scenes from Textual Descriptions},
 	    booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
 	    month = {June},
-	    year = {2019}
-    	}
+	    year = {2019}}
 
     
 # License
