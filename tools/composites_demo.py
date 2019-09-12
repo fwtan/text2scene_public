@@ -82,6 +82,6 @@ if __name__ == '__main__':
         torch.cuda.manual_seed_all(config.seed)
     prepare_directories(config)
 
-    # puzzle_model_inference_preparation(config)
+    puzzle_model_inference_preparation(config)
     # puzzle_model_inference(config)
     composites_demo(config)

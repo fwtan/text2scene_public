@@ -458,7 +458,7 @@ class composites_coco(object):
         else:
             folder_name = field
         path = osp.join(self.root_dir, folder_name, split + self.year, image_index_string, file_name)
-        assert osp.exists(path), 'Path does not exist: {}'.format(path)
+        # assert osp.exists(path), 'Path does not exist: {}'.format(path)
         return path
 
     ####################################################################
@@ -535,7 +535,7 @@ class composites_coco(object):
             area = areas[i]
             if cate < 83 and area > self.cfg.coco_min_area:
                 indices.append(i)
-            elif area > 0.02:
+            elif area > 0.04:
                 indices.append(i)
 
         indices = np.array(indices)
@@ -569,7 +569,9 @@ class composites_coco(object):
             self.scenedb = [self.nms(x, 0.8) for x in self.scenedb]
             self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]
             self.scenedb = [self.filter_small_objects(x) for x in self.scenedb]
-            self.scenedb = [self.filter_concave_stuffs(x) for x in self.scenedb]
+            # self.scenedb = [self.filter_concave_stuffs(x) for x in self.scenedb]                                                                    
+            self.scenedb = [entry for entry in self.scenedb if is_valid_2(entry)]
+            # self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]                                                                   
         elif self.split == 'test':
             self.scenedb = [self.filter_small_objects(x) for x in self.scenedb]
             self.scenedb = [entry for entry in self.scenedb if is_valid_1(entry)]
